@@ -97,7 +97,9 @@ def query_is_muni(query, index, tokenizer, pipeline):
     response = pipeline(
         formatted_prompt,
         max_new_tokens=1024,
-        do_sample=True,
+        do_sample=False,
+        top_k=None,
+        top_p=None,
         return_full_text=False
     )[0]["generated_text"]
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
