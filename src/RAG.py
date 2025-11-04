@@ -1,15 +1,16 @@
-from llama_index.core import VectorStoreIndex, Document, StorageContext, load_index_from_storage
-from llama_index.llms.huggingface import HuggingFaceLLM
+import argparse
 import json
 import os
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.core.prompts import PromptTemplate
-import torch
-import gradio as gr
-import argparse
 from datetime import datetime
 from pathlib import Path
+
+import gradio as gr
+import torch
+from llama_index.core import VectorStoreIndex, Document, StorageContext, load_index_from_storage
+from llama_index.core.prompts import PromptTemplate
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.huggingface import HuggingFaceLLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
 
 class E5Embedding(HuggingFaceEmbedding):
