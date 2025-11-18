@@ -43,7 +43,7 @@ class Pipeline:
             **body,
             "messages":
             decision_messages,
-            "model": self.MODEL
+            "model": self.MODEL,
             "stream": False
         }
         decision_resp = requests.post(
@@ -103,9 +103,10 @@ class Pipeline:
         ]
         r = requests.post(
             url=f"{self.OLLAMA_BASE_URL}/v1/chat/completions",
-            json={**body, "messages"=messages, "model": self.MODEL},
+            json={**body, "messages":messages, "model": self.MODEL},
             stream=self.STREAM,
         )
+        return r
 
 
     def _ollama_chat(self, body):
@@ -121,18 +122,18 @@ class Pipeline:
     def pipe(
         self, user_message: str, model_id: str, messages: List[dict], body: dict
     ) -> Union[str, Generator, Iterator]:
-        print(f"pipe:{__name__}")
+        print(f"pipe:{__name__}", flush=True)
 
         self.OLLAMA_BASE_URL = "http://localhost:11434"
         self.MODEL = "qwen3:14b"
-        self.STREAM = true
+        self.STREAM = True
 
 
         if "user" in body:
-            print("######################################")
-            print(f'# User: {body["user"]["name"]} ({body["user"]["id"]})')
-            print(f"# Message: {user_message}")
-            print("######################################")
+            print("######################################", flush=True)
+            print(f'# User: {body["user"]["name"]} ({body["user"]["id"]})', flush=True)
+            print(f"# Message: {user_message}", flush=True)
+            print("######################################", flush=True)
 
         try:
             messages = self.prepend_system_prompt(messages)
@@ -140,7 +141,7 @@ class Pipeline:
             if retrieve:  
                 query = self.compose_query(body, messages)
                 retrieved = self.retrieve(query)
-                r = generate_with_retrieved(body, messages, retrieved)
+                r = self.generate_with_retrieved(body, messages, retrieved)
             else:
                 r = self._ollama_chat(body)
             return r.iter_lines() if body["stream"] else r.json()
