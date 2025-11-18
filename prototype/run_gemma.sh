@@ -13,4 +13,4 @@ hostport="localhost:12343"
 export CUDA_VISIBLE_DEVICES="all"
 export OLLAMA_HOST="$hostport"
 
-$COMMAND
+OLLAMA_HOST="$hostport" $OLLAMA_BIN run gemma3:4b
