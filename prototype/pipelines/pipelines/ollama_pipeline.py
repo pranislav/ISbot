@@ -124,8 +124,8 @@ class Pipeline:
     ) -> Union[str, Generator, Iterator]:
         print(f"pipe:{__name__}", flush=True)
 
-        self.OLLAMA_BASE_URL = "http://localhost:11434"
-        self.MODEL = "qwen3:14b"
+        self.OLLAMA_BASE_URL = "http://localhost:12343"
+        self.MODEL = "gemma3:4b"
         self.STREAM = True
 
 
