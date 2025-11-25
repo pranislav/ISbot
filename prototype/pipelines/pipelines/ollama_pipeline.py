@@ -5,7 +5,8 @@ import requests
 import os
 import json
 from llama_index.core import VectorStoreIndex, Document, StorageContext, load_index_from_storage
-
+import logging
+logging.getLogger().setLevel(logging.ERROR)
 
 class Pipeline:
     def __init__(self):
@@ -19,7 +20,12 @@ class Pipeline:
     async def on_startup(self):
         """This function is called when the server is started."""
         print(f"on_startup:{__name__}")
-        self.SYSTEM_PROMPT = """Jsi nápomocný chatbot Masarykovy univerzity. Tvým úkolem je pomáhat uživatelům orientovat se v Informačním systému (IS MU) a poskytovat rady, jak provést požadované akce v systému. Máš k dispozici oficiální dokumenty nápovědy IS MU, které mohou obsahovat užitečné informace."""
+        self.SYSTEM_PROMPT = """You are a helpful assistant for Masaryk University. You help users navigate the
+            Information System (IS MU) and provide clear guidance on how to perform the
+            actions they need. You can use the official IS MU help documents (Nápověda) when relevant.
+
+            Respond in the same language as the user (Czech or English).
+        """
         self.index = load_or_create_index("../../dataset/index")
         pass # TODO refine system prompt, maybe in english since instructions
 
@@ -37,11 +43,11 @@ class Pipeline:
     def decide_retrieve(self, body, messages):
         decision_messages = [
             {"role": "system", "content":
-             "If you can answer directly, reply only: ANSWER"
-             "If you need external info, reply only: RETRIEVE"
-             "No other text."},
+             "If you can answer directly, reply only: 'ANSWER'. "
+             "If you need external info, reply only: 'RETRIEVE'. No other text."},
             *messages,
         ]
+        print(f"MESSAGES FOR DECISION:\n\n {decision_messages}")
         decision_body = {
             **body,
             "messages":
@@ -55,10 +61,11 @@ class Pipeline:
         ).json()
         decision_text = decision_resp["choices"][0]["message"]["content"]
         retrieve = "RETRIEVE" in decision_text.upper()
+        print(f"Decide retrieve: {retrieve} ({decision_text})")
         return retrieve
 
     def compose_query(self, body, messages):
-        QUERY_PROMPT = """You are a query reformulator for a RAG system.
+        QUERY_PROMPT = """You are a search query generator for a RAG system.
             TASK:
             Generate the best Czech search query based on the entire chat history.
             The goal is to retrieve relevant Czech documents.
@@ -78,6 +85,8 @@ class Pipeline:
             *messages
         ]
 
+        print(f"MESSAGES FOR QUERY COMPOSITION:\n\n {query_messages}")
+
         query_body = {
             **body,
             "messages": query_messages,
@@ -90,6 +99,8 @@ class Pipeline:
             json=query_body
         ).json()["choices"][0]["message"]["content"]
 
+        print(f"Composed query: {query}")
+
         return query
 
 
@@ -97,6 +108,7 @@ class Pipeline:
         retriever = self.index.as_retriever(similarity_top_k=5)
         retrieved_nodes = retriever.retrieve(query)
         retrieved_text = ("\n\n" + "next document" + "\n\n").join([n.node.get_content() for n in retrieved_nodes])
+        # print(f"Retrieved text: {retrieved_text}")
         return retrieved_text
 
 
@@ -106,6 +118,9 @@ class Pipeline:
             {"role": "system", "content": f"Here are relevant parts from the official help pages (Nápověda):\n\n{retrieved}"},
             *messages[1:],
         ]
+
+        print(f"MESSAGES FOR GENERATION WITH RETRIEVED:\n\n {messages}")
+
         r = requests.post(
             url=f"{self.OLLAMA_BASE_URL}/v1/chat/completions",
             json={**body, "messages":messages, "model": self.MODEL},
@@ -127,18 +142,18 @@ class Pipeline:
     def pipe(
         self, user_message: str, model_id: str, messages: List[dict], body: dict
     ) -> Union[str, Generator, Iterator]:
-        print(f"pipe:{__name__}", flush=True)
+        # print(f"pipe:{__name__}", flush=True)
 
         self.OLLAMA_BASE_URL = "http://localhost:12343"
         self.MODEL = "gemma3:4b"
         self.STREAM = True
 
 
-        if "user" in body:
-            print("######################################", flush=True)
-            print(f'# User: {body["user"]["name"]} ({body["user"]["id"]})', flush=True)
-            print(f"# Message: {user_message}", flush=True)
-            print("######################################", flush=True)
+        # if "user" in body:
+        #     print("######################################", flush=True)
+        #     print(f'# User: {body["user"]["name"]} ({body["user"]["id"]})', flush=True)
+        #     print(f"# Message: {user_message}", flush=True)
+        #     print("######################################", flush=True)
 
         try:
             messages = self.prepend_system_prompt(messages)
