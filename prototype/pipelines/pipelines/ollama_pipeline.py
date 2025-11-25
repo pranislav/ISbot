@@ -1,6 +1,10 @@
 from typing import List, Union, Generator, Iterator
 from schemas import OpenAIChatMessage
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 import requests
+import os
+import json
+from llama_index.core import VectorStoreIndex, Document, StorageContext, load_index_from_storage
 
 
 class Pipeline:
@@ -11,18 +15,17 @@ class Pipeline:
         # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
         # self.id = "ollama_pipeline"
         self.name = "Ollama Pipeline"
-        pass
 
     async def on_startup(self):
-        # This function is called when the server is started.
+        """This function is called when the server is started."""
         print(f"on_startup:{__name__}")
         self.SYSTEM_PROMPT = """Jsi nápomocný chatbot Masarykovy univerzity. Tvým úkolem je pomáhat uživatelům orientovat se v Informačním systému (IS MU) a poskytovat rady, jak provést požadované akce v systému. Máš k dispozici oficiální dokumenty nápovědy IS MU, které mohou obsahovat užitečné informace."""
+        self.index = load_or_create_index("../../dataset/index")
         pass # TODO refine system prompt, maybe in english since instructions
 
     async def on_shutdown(self):
-        # This function is called when the server is stopped.
+        """This function is called when the server is stopped."""
         print(f"on_shutdown:{__name__}")
-        pass
 
     def prepend_system_prompt(self, messages):
         if not messages or messages[0]["role"] != "system":
@@ -91,8 +94,10 @@ class Pipeline:
 
 
     def retrieve(self, query):
-        # TODO
-        return "retrieval not implemented yet"
+        retriever = self.index.as_retriever(similarity_top_k=5)
+        retrieved_nodes = retriever.retrieve(query)
+        retrieved_text = ("\n\n" + "next document" + "\n\n").join([n.node.get_content() for n in retrieved_nodes])
+        return retrieved_text
 
 
     def generate_with_retrieved(self, body, messages, retrieved):
@@ -148,3 +153,32 @@ class Pipeline:
 
         except Exception as e:
             return f"Error: {e}"
+
+
+
+class E5Embedding(HuggingFaceEmbedding):
+    def _get_query_embedding(self, query: str):
+        return super()._get_query_embedding(f"query: {query}")
+
+    def _get_text_embedding(self, text: str):
+        return super()._get_text_embedding(f"passage: {text}")
+
+
+def load_or_create_index(PERSIST_DIR):
+    embed_model = E5Embedding(model_name="intfloat/multilingual-e5-base")
+    if os.path.exists(PERSIST_DIR) and os.listdir(PERSIST_DIR):
+        print("Loading existing index...")
+        storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
+        index = load_index_from_storage(storage_context, embed_model=embed_model)
+    else:
+        print("Creating new index...")
+        with open("../../dataset/transformed_for_llamaindex.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            documents = [Document(text=block["text"], metadata=block.get("metadata", {})) for block in data]
+        index = VectorStoreIndex.from_documents(
+            documents,
+            embed_model=embed_model,
+        )
+        index.storage_context.persist(persist_dir=PERSIST_DIR)
+        print("index created")
+    return index
