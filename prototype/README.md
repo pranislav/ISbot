@@ -41,6 +41,13 @@ Also add pipelines server (see [tutorial](https://open-webui.com/pipelines/)):
  1. Add connection type to `Local`, URL to `http://localhost:9099` and bearer API token to `0p3n-w3bu!`.
  1. Ignore any errors that are showing on server side regarding spec, it should not be a problem hopefully.
 
+To let users create their own accounts:
+ 1. Login as an admin.
+ 1. Nabigate to an admin panel.
+ 1. Go to a general section of settings tab.
+ 1. Set default user role to `user`.
+ 1. Enable `enable new user sign ups`.
+
 
 ## Workarounds
 
