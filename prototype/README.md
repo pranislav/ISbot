@@ -24,7 +24,7 @@ open-webui serve
 
 **Forward OpenWebUI to local device:**
 ```sh
-ssh -fN -L 8080:localhost:8080 apollo`
+ssh -fN -L 8080:localhost:8080 apollo
 ```
 
 **Start Pipeline server (pipelines stored at `pipelines/pipelines/`):**
