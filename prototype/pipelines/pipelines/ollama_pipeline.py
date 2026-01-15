@@ -8,6 +8,10 @@ from llama_index.core import VectorStoreIndex, Document, StorageContext, load_in
 import logging
 logging.getLogger().setLevel(logging.ERROR)
 
+_print = print
+def print(*args, **kwargs):
+    return _print(*args, **kwargs, flush=True)
+    
 class Pipeline:
     def __init__(self):
         # Optionally, you can set the id and name of the pipeline.
@@ -145,7 +149,7 @@ class Pipeline:
         # print(f"pipe:{__name__}", flush=True)
 
         self.OLLAMA_BASE_URL = "http://localhost:12343"
-        self.MODEL = "gemma3:4b"
+        self.MODEL = "gemma3:12b"
         self.STREAM = True
 
 
